@@ -1,0 +1,178 @@
+import os
+import sklearn
+import pickle
+import pandas as pd
+import numpy as np 
+from typing import List
+from pydantic import BaseModel
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI , HTTPException , Request
+
+
+# CORS ORIGINS CONFIGURATION
+origins = [
+    "http://localhost:8001", # Localhost for FastAPI server
+    #"http://127.0.0.1:5500", # Optional: front-end dev server
+    ]
+
+# FASTAPI APP INITIALIZATION
+# -------------------------
+app = FastAPI(
+    title="CREDIT CARD APPROVAL",
+    description="Welcome in Credit Card Approval AI APP .... \nThis app is used Decision Tree Model",
+    version="1.0.0"
+)
+
+
+# CORS MIDDLEWARE
+# -------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+
+# LOAD MODEL AND SCALER
+# -------------------------
+try:
+    model_path = os.path.join(os.path.dirname(__file__), "model", "model.pkl")
+    scaler_path = os.path.join(os.path.dirname(__file__), "scaler", "scaler.pkl")
+
+    # Load trained Decision Tree model
+    with open(model_path, "rb") as file:
+        model = pickle.load(file)
+
+    # Load pre-fitted scaler
+    with open(scaler_path, "rb") as file:
+        scaler = pickle.load(file)
+
+    print("MODEL AND SCALER LOADED SUCCESSFULLY ✅")
+
+except Exception as e:
+    print("Model or Scaler Load Error ❌:", e)
+    model = None
+    scaler = None
+
+# TEMPLATE CONFIGURATION
+# -------------------------
+templates = Jinja2Templates(directory="templates")
+
+# Pydantic MODEL FOR INPUT DATA
+# -------------------------
+class CreditCardFeatures(BaseModel):
+    Credit_Score: int
+    Debt: float
+    Income: float
+    Loan_Amount: int
+    Account_Age: int
+    Years_Employed: int
+    Num_Bank_Accounts: int
+    Num_Credit_Cards: int
+    Gender: int         # 1 = Male, 0 = Female
+    Married: int        # 1 = Yes, 0 = No
+    Dependents: int
+    Credit_Cards_Limit: int
+    City: int                 # 1=Islamabad, 2=Karachi, 3=Lahore, 4=Multan
+    Education_Level: int      # 1=Bachelor, 2=High School, 3=Master, 4=PhD
+    Employment_Type: int      # 1=Government, 2=Private, 3=Self-employed
+    Housing_Status: int       # 1=Family, 2=Mortgage, 3=Own, 4=Rent
+    Citizenship: int          # 1=By Birth, 2=By Other Means
+
+# INPUT PREPROCESSING FUNCTION
+# -------------------------
+def preprocess_input(features: CreditCardFeatures):
+    """
+    Convert Pydantic model to pandas DataFrame and apply one-hot encoding for categorical features.
+    """
+    data = features.dict()
+
+    df = pd.DataFrame({
+        'Credit_Score': [data['Credit_Score']],
+        'Debt': [data['Debt']],
+        'Income': [data['Income']],
+        'Loan_Amount': [data['Loan_Amount']],
+        'Account_Age': [data['Account_Age']],
+        'Years_Employed': [data['Years_Employed']],
+        'Num_Bank_Accounts': [data['Num_Bank_Accounts']],
+        'Num_Credit_Cards': [data['Num_Credit_Cards']],
+        'Gender': [data['Gender']],
+        'Married': [data['Married']],
+        'Dependents': [data['Dependents']],
+        'Credit_Cards_Limit': [data['Credit_Cards_Limit']],
+
+        # One-hot encoding for City
+        'City_Islamabad': [1 if data['City'] == 1 else 0],
+        'City_Karachi': [1 if data['City'] == 2 else 0],
+        'City_Lahore': [1 if data['City'] == 3 else 0],
+        'City_Multan': [1 if data['City'] == 4 else 0],
+
+        # One-hot encoding for Education Level
+        'Education_Level_Bachelor': [1 if data['Education_Level'] == 1 else 0],
+        'Education_Level_High School': [1 if data['Education_Level'] == 2 else 0],
+        'Education_Level_Master': [1 if data['Education_Level'] == 3 else 0],
+        'Education_Level_PhD': [1 if data['Education_Level'] == 4 else 0],
+
+        # One-hot encoding for Employment Type
+        'Employment_Type_Government': [1 if data['Employment_Type'] == 1 else 0],
+        'Employment_Type_Private': [1 if data['Employment_Type'] == 2 else 0],
+        'Employment_Type_Self-employed': [1 if data['Employment_Type'] == 3 else 0],
+
+        # One-hot encoding for Housing Status
+        'Housing_Status_Family': [1 if data['Housing_Status'] == 1 else 0],
+        'Housing_Status_Mortgage': [1 if data['Housing_Status'] == 2 else 0],
+        'Housing_Status_Own': [1 if data['Housing_Status'] == 3 else 0],
+        'Housing_Status_Rent': [1 if data['Housing_Status'] == 4 else 0],
+
+        # One-hot encoding for Citizenship
+        'Citizenship_By Birth': [1 if data['Citizenship'] == 1 else 0],
+        'Citizenship_By Other Means': [1 if data['Citizenship'] == 2 else 0]
+    })
+
+    return df
+
+# Pydantic MODEL FOR RESPONSE
+# -------------------------
+class Predicted_Response(BaseModel):
+    Approved: str
+
+# ROUTE: HOME PAGE
+# -------------------------
+@app.get("/", response_class=HTMLResponse)
+async def server_ui(request: Request):
+    """
+    Serve the index.html template on home page
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# ROUTE: PREDICTION ENDPOINT
+# -------------------------
+@app.post("/PREDICT", response_model=Predicted_Response)
+def Predict_approval(features: CreditCardFeatures):
+    """
+    Predict credit card approval based on input features
+    """
+    if model is None or scaler is None:
+        # Server misconfiguration
+        raise HTTPException(status_code=500, detail="Model or Scaler not loaded. Server configuration error.")
+
+    try:
+        input_data = preprocess_input(features)
+        scaled_data = scaler.transform(input_data)
+        prediction = model.predict(scaled_data)
+        result = "Approved ✅" if prediction[0] == 1 else "Rejected ❌"
+        return {"Approved": result}
+    except Exception as e:
+        # Return error if prediction fails
+        raise HTTPException(status_code=400, detail=str(e))
+
+# -------------------------
+# START THE SERVER
+# -------------------------
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8001)
