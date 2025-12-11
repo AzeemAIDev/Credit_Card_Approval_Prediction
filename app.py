@@ -14,7 +14,7 @@ from fastapi import FastAPI , HTTPException , Request
 # CORS ORIGINS CONFIGURATION
 origins = [
     "http://localhost:8001", # Localhost for FastAPI server
-    #"http://127.0.0.1:5500", # Optional: front-end dev server
+    #"http://127.0.0.1:8001", # Optional: front-end dev server
     ]
 
 # FASTAPI APP INITIALIZATION
@@ -176,3 +176,4 @@ def Predict_approval(features: CreditCardFeatures):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="localhost", port=8001)
+
