@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Approval Prediction</title>
+    <!-- Load Tailwind CSS for beautiful styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#3b82f6', 
+                        'success': '#10b981',
+                        'danger': '#ef4444', 
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for input fields */
+        .input-group label { font-weight: 500; }
+        .input-field {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .input-field:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl p-6 md:p-10">
+        <h1 class="text-3xl font-extrabold text-gray-800 mb-6 text-center">Credit Card Approval Predictor (ML Model)</h1>
+        <p class="text-gray-500 text-center mb-8">Enter customer data to get a real-time prediction from your FastAPI backend.</p>
+
+        <form id="predictionForm" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            
+            <!-- Financial Details -->
+            <div class="input-group"><label for="Credit_Score" class="block text-sm text-gray-700">Credit Score (300-900)</label><input type="number" id="Credit_Score" value="680" required min="300" max="900" class="input-field"></div>
+            <div class="input-group"><label for="Income" class="block text-sm text-gray-700">Annual Income (PKR)</label><input type="number" step="0.01" id="Income" value="65000" required class="input-field"></div>
+            <div class="input-group"><label for="Loan_Amount" class="block text-sm text-gray-700">Total Existing Loan Amount</label><input type="number" id="Loan_Amount" value="150000" required class="input-field"></div>
+            <div class="input-group"><label for="Debt" class="block text-sm text-gray-700">Monthly Debt Payment</label><input type="number" step="0.01" id="Debt" value="3500.50" required class="input-field"></div>
+            <div class="input-group"><label for="Credit_Cards_Limit" class="block text-sm text-gray-700">Credit Cards Limit</label><input type="number" id="Credit_Cards_Limit" value="500000" required class="input-field"></div>
+            <div class="input-group"><label for="Num_Credit_Cards" class="block text-sm text-gray-700">Number of Credit Cards</label><input type="number" id="Num_Credit_Cards" value="2" required min="0" class="input-field"></div>
+            <div class="input-group"><label for="Account_Age" class="block text-sm text-gray-700">Credit Account Age (Years)</label><input type="number" id="Account_Age" value="5" required min="0" class="input-field"></div>
+            <div class="input-group"><label for="Years_Employed" class="block text-sm text-gray-700">Years Employed</label><input type="number" id="Years_Employed" value="3" required min="0" class="input-field"></div>
+            <div class="input-group"><label for="Num_Bank_Accounts" class="block text-sm text-gray-700">Number of Bank Accounts</label><input type="number" id="Num_Bank_Accounts" value="3" required min="1" class="input-field"></div>
+            <div class="input-group"><label for="Dependents" class="block text-sm text-gray-700">Number of Dependents</label><input type="number" id="Dependents" value="1" required min="0" class="input-field"></div>
+
+            <!-- Categorical Details (Updated Encoding Display) -->
+            
+            <div class="input-group">
+                <label for="Gender" class="block text-sm text-gray-700">Gender</label>
+                <select id="Gender" required class="input-field appearance-none">
+                    <option value="1">1: Male</option>
+                    <option value="0">0: Female</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="Married" class="block text-sm text-gray-700">Married Status</label>
+                <select id="Married" required class="input-field appearance-none">
+                    <option value="1">1: Yes</option>
+                    <option value="0">0: No</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="City" class="block text-sm text-gray-700">City</label>
+                <select id="City" required class="input-field appearance-none">
+                    <option value="1">1: Islamabad</option>
+                    <option value="2">2: Karachi</option>
+                    <option value="3">3: Lahore</option>
+                    <option value="4">4: Multan</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="Education_Level" class="block text-sm text-gray-700">Education Level</label>
+                <select id="Education_Level" required class="input-field appearance-none">
+                    <option value="1">1: Bachelor</option>
+                    <option value="2">2: High School</option>
+                    <option value="3">3: Master</option>
+                    <option value="4">4: PhD</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="Employment_Type" class="block text-sm text-gray-700">Employment Type</label>
+                <select id="Employment_Type" required class="input-field appearance-none">
+                    <option value="1">1: Government</option>
+                    <option value="2">2: Private</option>
+                    <option value="3">3: Self-employed</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="Housing_Status" class="block text-sm text-gray-700">Housing Status</label>
+                <select id="Housing_Status" required class="input-field appearance-none">
+                    <option value="1">1: Family</option>
+                    <option value="2">2: Mortgage</option>
+                    <option value="3">3: Own</option>
+                    <option value="4">4: Rent</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="Citizenship" class="block text-sm text-gray-700">Citizenship</label>
+                <select id="Citizenship" required class="input-field appearance-none">
+                    <option value="1">1: By Birth</option>
+                    <option value="2">2: By Other Means</option>
+                </select>
+            </div>
+
+            <!-- Submit Button and Result Display -->
+            <div class="md:col-span-2 mt-6">
+                <button type="submit" 
+                    id="predictButton"
+                    class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    Predict Credit Card Approval
+                </button>
+            </div>
+            
+            <div id="resultContainer" class="md:col-span-2 mt-6 p-4 rounded-lg text-center hidden" role="alert">
+                <p id="resultMessage" class="font-semibold text-lg"></p>
+                <p id="errorMessage" class="text-sm mt-1 text-danger hidden"></p>
+            </div>
+
+        </form>
+    </div>
+
+    <script>
+        // API Address: This must match where your Python FastAPI server is running
+        const API_URL = 'http://localhost:8001/PREDICT'; 
+        
+        function displayMessage(message, isError = false) {
+            const container = document.getElementById('resultContainer');
+            const messageEl = document.getElementById('resultMessage');
+            const errorEl = document.getElementById('errorMessage');
+            
+            container.classList.remove('hidden', 'bg-success/20', 'bg-danger/20', 'text-success', 'text-danger', 'border', 'border-success-400', 'border-danger-400');
+            errorEl.classList.add('hidden');
+            
+            if (isError) {
+                container.classList.add('bg-danger/20', 'text-danger', 'border', 'border-danger-400');
+                messageEl.textContent = 'Prediction Failed';
+                errorEl.textContent = message;
+                errorEl.classList.remove('hidden');
+            } else {
+                if (message.includes('Approved')) {
+                     container.classList.add('bg-success/20', 'text-success', 'border', 'border-success-400');
+                } else {
+                     container.classList.add('bg-danger/20', 'text-danger', 'border', 'border-danger-400');
+                }
+                messageEl.textContent = `Prediction Result: ${message}`;
+            }
+            container.classList.remove('hidden');
+        }
+
+        document.getElementById('predictionForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const button = document.getElementById('predictButton');
+            const originalButtonText = button.textContent;
+            
+            button.disabled = true;
+            button.textContent = 'Predicting...';
+
+            // Data collection (JavaScript mapping values 0/1/2/3/4 as integers)
+            const features = {
+                Credit_Score: parseInt(document.getElementById('Credit_Score').value),
+                Debt: parseFloat(document.getElementById('Debt').value),
+                Income: parseFloat(document.getElementById('Income').value),
+                Loan_Amount: parseInt(document.getElementById('Loan_Amount').value),
+                Account_Age: parseInt(document.getElementById('Account_Age').value),
+                Years_Employed: parseInt(document.getElementById('Years_Employed').value),
+                Num_Bank_Accounts: parseInt(document.getElementById('Num_Bank_Accounts').value),
+                Num_Credit_Cards: parseInt(document.getElementById('Num_Credit_Cards').value),
+                Gender: parseInt(document.getElementById('Gender').value),
+                Married: parseInt(document.getElementById('Married').value),
+                Dependents: parseInt(document.getElementById('Dependents').value),
+                Credit_Cards_Limit: parseInt(document.getElementById('Credit_Cards_Limit').value),
+                City: parseInt(document.getElementById('City').value),
+                Education_Level: parseInt(document.getElementById('Education_Level').value),
+                Employment_Type: parseInt(document.getElementById('Employment_Type').value),
+                Housing_Status: parseInt(document.getElementById('Housing_Status').value),
+                Citizenship: parseInt(document.getElementById('Citizenship').value),
+            };
+
+            // Sending request to FastAPI
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(features)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayMessage(data.Approved, false);
+                } else {
+                    let detail = data.detail || 'Unknown server error.';
+                    displayMessage(`API Error: ${detail}`, true);
+                }
+
+            } catch (error) {
+                // If the server is not running
+                displayMessage(`Network Error: Your Python server (app.py) is not running. Please run it first in the terminal.`, true);
+                console.error('Fetch error:', error);
+            } finally {
+                button.disabled = false;
+                button.textContent = originalButtonText;
+            }
+        });
+    </script>
+</body>
+</html>
